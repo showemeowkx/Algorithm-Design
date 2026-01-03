@@ -1,10 +1,12 @@
 from utils.logger import Logger
 from app.initializer import Initializer
+from storage.manager import StorageManager
 
 class App:
     def __init__(self, data_dir_path):
         self.data_dir = data_dir_path
         self.initializer = Initializer(self.data_dir)
+        self.storage = StorageManager(self.data_dir)
         self.logger = Logger("App")
 
     def start(self):
@@ -16,6 +18,13 @@ class App:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
 
         self.logger.info("--- WORKSPACE INITIALIZATIZED SUCCESSFULLY ---")
+
+    def add(self, data, key=-1):
+        self.storage.add_record(data, key)
+        try:
+            self.storage.add_record(data, key)
+        except Exception as e:
+            self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
         
         
         
