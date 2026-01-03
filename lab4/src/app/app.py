@@ -20,7 +20,6 @@ class App:
         self.logger.info("--- WORKSPACE INITIALIZATIZED SUCCESSFULLY ---")
 
     def add(self, data, key=-1):
-        self.storage.add_record(data, key)
         try:
             self.storage.add_record(data, key)
         except Exception as e:
