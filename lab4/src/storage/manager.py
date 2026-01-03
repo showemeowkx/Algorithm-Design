@@ -22,18 +22,22 @@ class StorageManager:
             record_number = file_size // (self.RECORD_SIZE + 1)
         else:
             record_number = 0
-
         new_index = record_number + 1 if key == -1 else key
-        formatted_data = data.ljust(self.RECORD_SIZE)[:self.RECORD_SIZE] + "\n"
 
-        with open(self.data_path, "a") as f:
-            f.write(formatted_data)
+        if not self._index_exists(new_index):
+            formatted_data = data.ljust(self.RECORD_SIZE)[:self.RECORD_SIZE] + "\n"
 
-        self._write_index(new_index, record_number)
+            with open(self.data_path, "a") as f:
+                f.write(formatted_data)
 
-        return new_index
+            self._write_index(new_index, record_number)
+
+            return new_index
+        else:
+            self.logger.warning(f"An element with index {new_index} already exists!")
+            return -1
     
-    def _write_index(self, new_idnex, record_number):
+    def _get_indices(self):
         indices = []
 
         if os.path.exists(self.index_path):
@@ -43,6 +47,23 @@ class StorageManager:
                         pair = line.strip().split(',')
                         k, v = pair
                         indices.append((int(k), int(v)))
+
+        return indices
+    
+    def _index_exists(self, index):
+        indices = self._get_indices()
+        keys = []
+        result = False
+
+        for k, v in indices:
+            keys.append(k)
+
+        if int(index) in keys: result = True
+
+        return result
+    
+    def _write_index(self, new_idnex, record_number):
+        indices = self._get_indices()
 
         if len(indices) < self.MAIN_INDEX_CAPACITY:
             insert_pos = 0
