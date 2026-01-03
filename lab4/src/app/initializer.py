@@ -5,13 +5,9 @@ class Initializer:
     def __init__(self, data_dir_path):
         self.data_dir = data_dir_path
 
-        self.index_filename = "index.dat"
-        self.data_filename = "data.dat"
-        self.overflow_filename = "overflow.dat"
-
-        self.index_path = os.path.join(self.data_dir, self.index_filename)
-        self.data_path = os.path.join(self.data_dir, self.data_filename)
-        self.overflow_path = os.path.join(self.data_dir, self.overflow_filename)
+        self.data_path = os.path.join(self.data_dir, "data.dat")
+        self.index_path = os.path.join(self.data_dir, "index.dat")
+        self.overflow_path = os.path.join(self.data_dir, "overflow.dat")
 
         self.logger = Logger("Initializer")
 
@@ -26,7 +22,7 @@ class Initializer:
             os.mkdir(self.data_dir)
             self.logger.info("Data directory created successfully")
 
-            self.create_data_files(files_to_check)
+            self._create_data_files(files_to_check)
 
         else:
             self.logger.info("Data directory found. Looking for files...")
@@ -43,11 +39,11 @@ class Initializer:
 
             if len(missing_files) > 0:
                 self.logger.info(f"Creating missing files ({len(missing_files)})...")
-                self.create_data_files(missing_files)
+                self._create_data_files(missing_files)
 
         self.logger.info("Workspace initialized successfully!")
 
-    def create_data_files(self, settings):
+    def _create_data_files(self, settings):
         try:
             for file in settings:
                 with open(file, 'x') as f:
