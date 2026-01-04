@@ -20,10 +20,14 @@ class App:
         self.logger.info("--- WORKSPACE INITIALIZATIZED SUCCESSFULLY ---")
 
     def add(self, data, key=-1):
+        self.logger.info("--- ADDING A NEW RECORD ---")
+
         try:
             self.storage.add_record(data, key)
         except Exception as e:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
+
+        self.logger.info("--- RECORD ADDED SUCCESSFULLY ---")
         
         
         

@@ -38,7 +38,7 @@ class Initializer:
                     missing_files.append(file)
 
             if len(missing_files) > 0:
-                self.logger.info(f"Creating missing files ({len(missing_files)})...")
+                self.logger.info(f"Creating missing files... ({len(missing_files)})")
                 self._create_data_files(missing_files)
 
         self.logger.info("Workspace initialized successfully!")
