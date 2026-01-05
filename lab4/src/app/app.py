@@ -28,6 +28,16 @@ class App:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
 
         self.logger.info("--- RECORD ADDED SUCCESSFULLY ---")
+
+    def search(self, key):
+        self.logger.info("--- SEARCHING FOR A RECORD ---")
+
+        try:
+            self.storage.search(key)
+        except Exception as e:
+            self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
+
+        self.logger.info("--- RECORD FOUND SUCCESSFULLY ---")
         
         
         

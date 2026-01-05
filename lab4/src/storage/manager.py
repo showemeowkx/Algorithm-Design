@@ -51,13 +51,34 @@ class StorageManager:
         else:
             self.logger.warning(f"An element with index {new_index} already exists!")
             return -1
-    
-    def _get_indices(self):
-        self.logger.info("Getting indeces...")
-        indices = []
+        
+    def search(self, key):
+        self.logger.info(f"Beginning searching process... (key: {key})")
+        indices = self._get_indices()
 
-        if os.path.exists(self.index_path):
-            with open(self.index_path, "r") as f:
+        if len(indices) < self.MAIN_INDEX_CAPACITY:
+            high = len(indices) - 1
+            keys = []
+
+            for k, v in indices:
+                keys.append((k))
+            
+            try:
+                pos =  ((key-keys[0]) * high)//(keys[high]-keys[0])
+                return indices[pos]
+            except IndexError:
+                self.logger.error_and_exit(f"No record found for index [{key}]", 0)
+        else:
+            indices = self._get_indices(overflow=True)
+            print("overflow") # PLACEHOLDER
+    
+    def _get_indices(self, overflow=False):
+        self.logger.info(f"Getting indeces... (overflow: {overflow})")
+        indices = []
+        path = self.overflow_path if overflow else self.index_path
+
+        if os.path.exists(path):
+            with open(path, "r") as f:
                 for line in f.readlines():
                     if line.strip():
                         pair = line.strip().split(',')
