@@ -23,21 +23,23 @@ class App:
         self.logger.info("--- ADDING A NEW RECORD ---")
 
         try:
-            return self.storage.add_record(data, key)
+            new_id = self.storage.add_record(data, key)
         except Exception as e:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
 
         self.logger.info("--- RECORD ADDED SUCCESSFULLY ---")
+        return new_id
 
     def search(self, key):
         self.logger.info("--- SEARCHING FOR A RECORD ---")
 
         try:
-            return self.storage.search(key)
+            result = self.storage.search(key)
         except Exception as e:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
 
         self.logger.info("--- RECORD FOUND SUCCESSFULLY ---")
+        return result
         
         
         
