@@ -57,23 +57,33 @@ class StorageManager:
         indices = self._get_indices()
 
         if len(indices) < self.MAIN_INDEX_CAPACITY:
-            high = len(indices) - 1
+            output_data = {"key": key, "value": None}
             keys = []
 
             for k, v in indices:
                 keys.append((k))
             
-            try:
-                pos =  ((key-keys[0]) * high)//(keys[high]-keys[0])
-                return indices[pos]
-            except IndexError:
+            pos = self._interpolation_search(keys=keys, target_key=key)
+            record_number = indices[pos][1]
+            
+            if pos != -1:
+                if os.path.exists(self.data_path):
+                    with open (self.data_path, "r") as f:
+                        for line_no, line in enumerate(f):
+                            if line_no == record_number:
+                                output_data["value"] = line.strip()
+                                break
+                    
+                    return output_data
+                else: raise Exception("Data file doesn't exist!")
+            else:
                 self.logger.error_and_exit(f"No record found for index [{key}]", 0)
         else:
             indices = self._get_indices(overflow=True)
             print("overflow") # PLACEHOLDER
     
     def _get_indices(self, overflow=False):
-        self.logger.info(f"Getting indeces... (overflow: {overflow})")
+        self.logger.info(f"Getting indices... (overflow: {overflow})")
         indices = []
         path = self.overflow_path if overflow else self.index_path
 
@@ -100,6 +110,28 @@ class StorageManager:
         if int(index) in keys: result = True
 
         return result
+    
+    def _interpolation_search(self, keys, target_key):
+        low = 0
+        high = len(keys) - 1
+
+        while low <= high and keys[low] <= target_key <= keys[high]:
+            if high == low:
+                if keys[low] == target_key: return low
+                break
+
+            pos =  low + ((target_key-keys[low]) * (high-low))//(keys[high]-keys[low])
+
+            if keys[pos] == target_key:
+                return pos
+            
+            if keys[pos] < target_key:
+                low = pos + 1
+            else:
+                high = pos - 1
+
+        return -1
+
     
     def _write_index(self, new_idnex, record_number):
         self.logger.info(f"Beginning index writing process... ({new_idnex},{record_number})")
