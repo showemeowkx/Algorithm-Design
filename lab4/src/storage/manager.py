@@ -29,6 +29,11 @@ class StorageManager:
 
         new_index = record_number + 1 if key == -1 else key
 
+        if key == -1:
+            while self._index_exists(new_index):
+                self.logger.info("Index exists. Adjusting auto-generated value...")
+                new_index += 1
+
         self.logger.info(f"New index for data: {new_index}")
 
         if not self._index_exists(new_index):
