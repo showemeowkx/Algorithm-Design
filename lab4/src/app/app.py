@@ -27,8 +27,12 @@ class App:
         except Exception as e:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
 
-        self.logger.info("--- RECORD ADDED SUCCESSFULLY ---")
-        return new_id
+        if new_id != -1:
+            self.logger.info("--- RECORD ADDED SUCCESSFULLY ---")
+            return new_id
+        else:
+            self.logger.info("--- FAILED TO ADD A RECORD ---")
+            return -1
 
     def search(self, key):
         self.logger.info("--- SEARCHING FOR A RECORD ---")
@@ -38,8 +42,12 @@ class App:
         except Exception as e:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
 
-        self.logger.info("--- RECORD FOUND SUCCESSFULLY ---")
-        return result
+        if result is not None:
+            self.logger.info("--- RECORD FOUND SUCCESSFULLY ---")
+            return result
+        else:
+            self.logger.info("--- FAILED TO FIND A RECORD ---")
+            return -1
         
         
         
