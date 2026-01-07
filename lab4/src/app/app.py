@@ -49,5 +49,20 @@ class App:
             self.logger.info("--- FAILED TO FIND A RECORD ---")
             return -1
         
+    def update(self, key, new_value):
+        self.logger.info("--- UPDATING A RECORD ---")
+
+        try:
+            updated = self.storage.update_record(key, new_value)
+        except Exception as e:
+            self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
+
+        if updated is not None:
+            self.logger.info("--- RECORD UPDATED SUCCESSFULLY ---")
+            return updated
+        else:
+            self.logger.info("--- FAILED TO UPDATE A RECORD ---")
+            return -1
+        
         
         

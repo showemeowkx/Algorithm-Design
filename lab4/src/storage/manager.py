@@ -81,6 +81,7 @@ class StorageManager:
 
         if output_data is None:
             self.logger.warning(f"Failed to find a record! (key: {key})")
+            return None
         else:
             if os.path.exists(self.data_path):
                 record_number = output_data[1]
@@ -88,9 +89,39 @@ class StorageManager:
                     for line_no, line in enumerate(f):
                         if line_no == record_number:
                             self.logger.info(f"Record found successfully! ({output_data})")
-                            return {"key": key, "value": line.strip()}
+                            return {"key": key, "number": record_number, "value": line.strip()}
                         
             else: raise Exception("Data file doesn't exist!")
+
+    def update_record(self, key, new_value):
+        self.logger.info(f"Beginning data changing process... (key: {key})")
+        record_to_change = self.search(key)
+
+        if record_to_change is None:
+            return None
+        
+        new_data = record_to_change
+        new_data["value"] = new_value
+        
+        formatted_value = new_value.ljust(self.RECORD_SIZE)[:self.RECORD_SIZE] + "\n"
+        file_data = []
+
+        with open (self.data_path, "r") as f:
+            self.logger.info("Reading old file data...")
+            file_data = f.readlines()
+
+            if len(file_data) < 0:
+                raise Exception("Data file is empty!")
+            
+            self.logger.info(f"Changing record data... (record_number: {record_to_change['number']})")
+            file_data[record_to_change["number"]] = formatted_value
+
+        with open(self.data_path, "w") as f:
+            self.logger.info(f"Replacing with updated data... ({new_data})")
+            f.writelines(file_data)
+
+        self.logger.info(f"Record updated successfully! (key: {key}, new_value: {new_value})")
+        return new_data
     
     def _get_indices(self, area='main'):
         self.logger.info(f"Getting indices... (area: {area})")
