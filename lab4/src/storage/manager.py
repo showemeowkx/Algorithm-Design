@@ -57,6 +57,9 @@ class StorageManager:
         indices = self._get_indices()
         output_data = None
 
+        if len(indices) == 0:
+            raise Exception("Index file is empty!")
+
         min_index_main = indices[0][0]
         max_index_main = indices[len(indices)-1][0]
 
@@ -65,14 +68,29 @@ class StorageManager:
             output_data = self._search_main(key, indices)
 
             if output_data is None:
-                self.logger.info("Failed to find in the main area.")
+                self.logger.info("Failed to find in the main area")
             
-        elif output_data is None:
+        if output_data is None:
             self.logger.info("Searching in the overflow area...")
             indices = self._get_indices(area='overflow')
-            print("overflow") # PLACEHOLDER
 
-        return output_data
+            if len(indices) == 0:
+                self.logger.warning("Overflow file is empty!")
+            else:
+                output_data = self._overflow_search(key, indices)
+
+        if output_data is None:
+            self.logger.warning(f"Failed to find a record! (key: {key})")
+        else:
+            if os.path.exists(self.data_path):
+                record_number = output_data[1]
+                with open (self.data_path, "r") as f:
+                    for line_no, line in enumerate(f):
+                        if line_no == record_number:
+                            self.logger.info(f"Record found successfully! ({output_data})")
+                            return {"key": key, "value": line.strip()}
+                        
+            else: raise Exception("Data file doesn't exist!")
     
     def _get_indices(self, area='main'):
         self.logger.info(f"Getting indices... (area: {area})")
@@ -110,17 +128,16 @@ class StorageManager:
             keys.append((k))
         
         pos = self._interpolation_search(keys=keys, target_key=key)
-        record_number = indices[pos][1]
         
-        if pos != -1:
-            if os.path.exists(self.data_path):
-                with open (self.data_path, "r") as f:
-                    for line_no, line in enumerate(f):
-                        if line_no == record_number:
-                            return {"key": key, "value": line.strip()}
-            else: raise Exception("Data file doesn't exist!")
-        else:
-            return None
+        if pos != -1: return indices[pos]
+        else: return None
+
+    def _overflow_search(self, key, indices):
+        for record in indices:
+            if record[0] == key:
+                return record
+
+        return None
 
     def _interpolation_search(self, keys, target_key):
         self.logger.info("Using interpolation search...")
@@ -143,7 +160,6 @@ class StorageManager:
                 high = pos - 1
 
         return -1
-
     
     def _write_index(self, new_idnex, record_number):
         self.logger.info(f"Beginning index writing process... ({new_idnex},{record_number})")
