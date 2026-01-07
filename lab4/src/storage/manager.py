@@ -127,6 +127,22 @@ class StorageManager:
         self.logger.info(f"Record updated successfully! (key: {key}, new_value: {new_value})")
         return new_data
     
+    def delete_record(self, key):
+        self.logger.info(f"Beginning data deleting process... (key: {key})")
+        record_to_delete = self.search(key)
+
+        if record_to_delete is None:
+            return None
+
+        self.logger.info("Deleting a record from data file...")
+        self._delete_from_file(self.data_path, record_to_delete["number"])
+
+        self.logger.info(f"Deleting a record from index file... (area: {record_to_delete['area']})")
+        index_path = self.index_path if record_to_delete["area"] == "main" else self.overflow_path
+        self._delete_from_file(index_path, record_to_delete["index_pos"])
+
+        return record_to_delete
+    
     def _get_indices(self, area='main'):
         self.logger.info(f"Getting indices... (area: {area})")
         indices = []
@@ -223,3 +239,18 @@ class StorageManager:
                 f.write(f"{new_idnex},{record_number}\n")
 
         self.logger.info(f"Index data written successfully! ({new_idnex},{record_number})")
+
+    def _delete_from_file(self, file_path, record_index):
+        with open (file_path, "r") as f:
+            self.logger.info("Reading old file data...")
+            file_data = f.readlines()
+
+            if len(file_data) < 0:
+                raise Exception("File is empty!")
+            
+            self.logger.info(f"Removing a record... (record_number: {record_index})")
+            file_data.pop(record_index)
+
+        with open(file_path, "w") as f:
+            self.logger.info(f"Replacing with updated data...")
+            f.writelines(file_data)

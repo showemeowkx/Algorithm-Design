@@ -64,5 +64,20 @@ class App:
             self.logger.info("--- FAILED TO UPDATE A RECORD ---")
             return -1
         
+    def remove(self, key):
+        self.logger.info("--- REMOVING A RECORD ---")
+
+        try:
+            updated = self.storage.delete_record(key)
+        except Exception as e:
+            self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
+
+        if updated is not None:
+            self.logger.info("--- RECORD REMOVED SUCCESSFULLY ---")
+            return updated
+        else:
+            self.logger.info("--- FAILED TO REMOVE A RECORD ---")
+            return -1
+        
         
         
