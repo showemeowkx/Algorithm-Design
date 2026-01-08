@@ -30,7 +30,7 @@ class App:
 
             for key, _ in indices_main + indices_overflow:
                 result = self.storage.search(key)
-                if result: all_records.append((result["key"], result["value"]))
+                if result: all_records.append(result)
                 
             self.logger.info("--- RECORDS RECEIVED SUCESSFULLY ---")
 
