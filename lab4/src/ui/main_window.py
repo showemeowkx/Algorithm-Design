@@ -76,4 +76,14 @@ class MainWindow(tk.Tk):
         pass
 
     def _on_delete_click(self):
-        pass
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a record to delete")
+            return
+        
+        item_data = self.tree.item(selected[0])
+        key_to_delete = item_data['values'][0]
+        
+        if messagebox.askyesno("Confirm", f"Are you sure you want to delete this record? (key: {key_to_delete})"):
+            self.app.remove(key_to_delete)
+            self.refresh_table()
