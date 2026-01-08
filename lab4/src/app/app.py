@@ -19,6 +19,27 @@ class App:
 
         self.logger.info("--- WORKSPACE INITIALIZATIZED SUCCESSFULLY ---")
 
+    def get_all(self):
+        self.logger.info("--- GETTING ALL RECORDS ---")
+
+        try:
+            all_records = []
+
+            indices_main = self.storage._get_indices(area="main")
+            indices_overflow = self.storage._get_indices(area="overflow")
+
+            for key, _ in indices_main + indices_overflow:
+                result = self.storage.search(key)
+                if result: all_records.append((result["key"], result["value"]))
+                
+            self.logger.info("--- RECORDS RECEIVED SUCESSFULLY ---")
+
+            return all_records
+        except Exception as e:
+            self.logger.error(f"An error occurred while fetching all records: {e}")
+            return []
+
+
     def add(self, data, key=-1):
         self.logger.info("--- ADDING A NEW RECORD ---")
 
