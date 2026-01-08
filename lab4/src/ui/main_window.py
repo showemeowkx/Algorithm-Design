@@ -1,9 +1,12 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, Toplevel, Label, Entry, Button, X
 
 class MainWindow(tk.Tk):
-    def __init__(self, app):
+    def __init__(self, app, record_size, index_record_size):
         super().__init__()
+        self.RECORD_SIZE = record_size
+        self.INDEX_RECORD_SIZE = index_record_size
+
         self.app = app
         self.title("Lab 4 - Oleksandr Cherepov")
         self.geometry("800x500")
@@ -65,9 +68,51 @@ class MainWindow(tk.Tk):
                 rec['area'].upper()
             ))
 
-    # PLACEHOLDERS
     def _on_add_click(self):
-        pass
+        add_window = Toplevel(self)
+        add_window.title("Add New Record")
+        add_window.geometry("250x200")
+        add_window.transient(self)
+        add_window.grab_set()
+
+        Label(add_window, text="Key (leave -1 for auto):").pack(pady=(10, 0))
+        key_entry = Entry(add_window)
+        key_entry.insert(0, "-1")
+        key_entry.pack(padx=20, fill=X)
+
+        Label(add_window, text="Data Value:").pack(pady=(10, 0))
+        value_entry = Entry(add_window)
+        value_entry.pack(padx=20, fill=X)
+
+        def submit():
+            key_val = key_entry.get()
+            data_val = value_entry.get()
+
+            if not data_val.strip():
+                messagebox.showwarning("Input Error", "Data value cannot be empty!")
+                return
+            
+            if len(key_val.encode('utf-8')) > self.INDEX_RECORD_SIZE - 5:
+                messagebox.showerror("Limit Exceeded", f"Key is too long!")
+                return
+
+            if len(data_val.encode('utf-8')) > self.RECORD_SIZE - 1:
+                messagebox.showerror("Limit Exceeded", f"Data is too long!")
+                return
+
+            try:
+                new_id = self.app.add(data_val, int(key_val))
+                
+                if new_id != -1:
+                    messagebox.showinfo("Success", f"Record added successfully with ID: {new_id}")
+                    add_window.destroy()
+                    self.refresh_table()
+                else:
+                    messagebox.showerror("Error", "Failed to add record. ID might already exist.")
+            except ValueError:
+                messagebox.showerror("Input Error", "Key must be an integer!")
+
+        Button(add_window, text="Add Record", command=submit).pack(pady=20)
 
     def _on_find_click(self):
         pass
