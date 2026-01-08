@@ -2,12 +2,11 @@ import os
 from utils.logger import Logger
 
 class StorageManager:
-    RECORD_SIZE = 64
-    INDEX_RECORD_SIZE = 16
-    MAIN_INDEX_CAPACITY = 7
-
-    def __init__(self, data_dir_path):
+    def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity):
         self.data_dir = data_dir_path
+        self.RECORD_SIZE = record_size
+        self.INDEX_RECORD_SIZE = index_record_size
+        self.MAIN_INDEX_CAPACITY = main_index_capacity
         
         self.data_path = os.path.join(self.data_dir, "data.dat")
         self.index_path = os.path.join(self.data_dir, "index.dat")

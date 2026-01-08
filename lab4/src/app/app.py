@@ -3,10 +3,10 @@ from app.initializer import Initializer
 from storage.manager import StorageManager
 
 class App:
-    def __init__(self, data_dir_path):
+    def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity):
         self.data_dir = data_dir_path
         self.initializer = Initializer(self.data_dir)
-        self.storage = StorageManager(self.data_dir)
+        self.storage = StorageManager(self.data_dir, record_size, index_record_size, main_index_capacity)
         self.logger = Logger("App")
 
     def start(self):
