@@ -3,8 +3,9 @@ from app.initializer import Initializer
 from storage.manager import StorageManager
 
 class App:
-    def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity):
+    def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity, block_capacity):
         self.data_dir = data_dir_path
+        self.BLOCK_CAPACITY = block_capacity
         self.initializer = Initializer(self.data_dir)
         self.storage = StorageManager(self.data_dir, record_size, index_record_size, main_index_capacity)
         self.logger = Logger("App")
@@ -38,7 +39,32 @@ class App:
         except Exception as e:
             self.logger.error(f"An error occurred while fetching all records: {e}")
             return []
+        
+    def get_block(self, block_number):
+        self.logger.info(f"--- GETTING RECORDS (BLOCK {block_number}) ---")
 
+        try:
+            records = []
+
+            indices_main = self.storage._get_indices(area="main")
+            indices_overflow = self.storage._get_indices(area="overflow")
+            all_indices = indices_main + indices_overflow
+
+            start = block_number * self.BLOCK_CAPACITY
+            end = start + self.BLOCK_CAPACITY
+            block_indices = all_indices[start:end]
+
+            for key, _ in block_indices:
+                result = self.storage.search(key)
+                if result: records.append(result)
+                
+            self.logger.info("--- RECORDS RECEIVED SUCESSFULLY ---")
+
+            total_blocks = (len(all_indices) + self.BLOCK_CAPACITY - 1) // self.BLOCK_CAPACITY
+            return records, total_blocks
+        except Exception as e:
+            self.logger.error(f"An error occurred while fetching records (block {block_number}): {e}")
+            return [], 0
 
     def add(self, data, key=-1):
         self.logger.info("--- ADDING A NEW RECORD ---")

@@ -6,6 +6,7 @@ class MainWindow(tk.Tk):
     def __init__(self, app, record_size, index_record_size):
         super().__init__()
         self.app = app
+        self.current_block = 0
         self.validator = Validator(record_size, index_record_size)
         self.title("Lab 4 - Oleksandr Cherepov")
         self.geometry("800x500")
@@ -54,11 +55,20 @@ class MainWindow(tk.Tk):
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=self.tree.yview)
 
+        nav_frame = tk.Frame(self, pady=10)
+        nav_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.btn_prev = tk.Button(nav_frame, text="◀", command=self._prev_block)
+        self.btn_prev.pack(side=tk.LEFT, padx=20)
+
+        self.btn_next = tk.Button(nav_frame, text="▶", command=self._next_block)
+        self.btn_next.pack(side=tk.RIGHT, padx=20)
+
     def refresh_table(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        records = self.app.get_all()
+        records, total_blocks = self.app.get_block(self.current_block)
 
         for rec in records:
             self.tree.insert("", tk.END, values=(
@@ -66,6 +76,17 @@ class MainWindow(tk.Tk):
                 rec['value'], 
                 rec['area'].upper()
             ))
+
+        self.btn_prev.config(state=tk.NORMAL if self.current_block > 0 else tk.DISABLED)
+        self.btn_next.config(state=tk.NORMAL if self.current_block < total_blocks - 1 else tk.DISABLED)
+
+    def _next_block(self):
+        self.current_block += 1
+        self.refresh_table()
+
+    def _prev_block(self):
+        self.current_block -= 1
+        self.refresh_table()
 
     def _on_add_click(self):
         add_window = Toplevel(self)
