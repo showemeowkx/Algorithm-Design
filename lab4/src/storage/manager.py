@@ -35,10 +35,10 @@ class StorageManager:
         self.logger.info(f"New index for data: {new_index}")
 
         if not self._index_exists(new_index, area='main') and not self._index_exists(new_index, area='overflow'):
-            formatted_data = data.ljust(self.RECORD_SIZE)[:self.RECORD_SIZE] + "\n"
+            formatted_data = (data.ljust(self.RECORD_SIZE)[:self.RECORD_SIZE] + "\n").encode('ascii')
 
             self.logger.info("Writing data...")
-            with open(self.data_path, "a") as f:
+            with open(self.data_path, "ab") as f:
                 f.write(formatted_data)
 
             self.logger.info(f"Record data written successfully! ({data})")
@@ -88,11 +88,11 @@ class StorageManager:
         else:
             if os.path.exists(self.data_path):
                 record_number = output_data[1]
-                with open (self.data_path, "r") as f:
+                with open (self.data_path, "rb") as f:
                     for line_no, line in enumerate(f):
                         if line_no == record_number:
                             self.logger.info(f"Record found successfully! ({output_data})")
-                            return {"key": key, "number": record_number, "value": line.strip(), "area": area, "index_pos": index_pos}
+                            return {"key": key, "number": record_number, "value": line.decode('ascii').strip(), "area": area, "index_pos": index_pos}
                         
             else: raise Exception("Data file doesn't exist!")
 
@@ -106,10 +106,10 @@ class StorageManager:
         new_data = record_to_change
         new_data["value"] = new_value
         
-        formatted_value = new_value.ljust(self.RECORD_SIZE)[:self.RECORD_SIZE] + "\n"
+        formatted_value = (new_value.ljust(self.RECORD_SIZE)[:self.RECORD_SIZE] + "\n").encode('ascii')
         file_data = []
 
-        with open (self.data_path, "r") as f:
+        with open (self.data_path, "rb") as f:
             self.logger.info(f"Reading old file data... (area: {record_to_change['area']})")
             file_data = f.readlines()
 
@@ -119,7 +119,7 @@ class StorageManager:
             self.logger.info(f"Changing record data... (record_number: {record_to_change['number']})")
             file_data[record_to_change["number"]] = formatted_value
 
-        with open(self.data_path, "w") as f:
+        with open(self.data_path, "wb") as f:
             self.logger.info(f"Replacing with updated data... ({new_data})")
             f.writelines(file_data)
 
@@ -148,8 +148,9 @@ class StorageManager:
         path = self.overflow_path if area == 'overflow' else self.index_path
 
         if os.path.exists(path):
-            with open(path, "r") as f:
+            with open(path, "rb") as f:
                 for line in f.readlines():
+                    line = line.decode("ascii")
                     if line.strip():
                         pair = line.strip().split(',')
                         k, v = pair
@@ -227,10 +228,10 @@ class StorageManager:
             indices.insert(insert_pos, (new_idnex, record_number))
 
             self.logger.info("Rewriting index file...")
-            with open(self.index_path, "w") as f:
+            with open(self.index_path, "wb") as f:
                 for k, v in indices:
                     index_data = f"{k},{v}"
-                    formatted_index_data = index_data.ljust(self.INDEX_RECORD_SIZE)[:self.INDEX_RECORD_SIZE] + "\n"
+                    formatted_index_data = (index_data.ljust(self.INDEX_RECORD_SIZE)[:self.INDEX_RECORD_SIZE] + "\n").encode('ascii')
                     f.write(formatted_index_data)
         else:
             self.logger.info("Main area is full. Writing into overflow...")
@@ -240,7 +241,7 @@ class StorageManager:
         self.logger.info(f"Index data written successfully! ({new_idnex},{record_number})")
 
     def _delete_from_file(self, file_path, record_index):
-        with open (file_path, "r") as f:
+        with open (file_path, "rb") as f:
             self.logger.info("Reading old file data...")
             file_data = f.readlines()
 
@@ -250,6 +251,6 @@ class StorageManager:
             self.logger.info(f"Removing a record... (record_number: {record_index})")
             file_data.pop(record_index)
 
-        with open(file_path, "w") as f:
+        with open(file_path, "wb") as f:
             self.logger.info(f"Replacing with updated data...")
             f.writelines(file_data)

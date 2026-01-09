@@ -13,7 +13,7 @@ class Validator:
         except ValueError:
             return False, ("Input Error", "Index must be an integer!")
         
-        if len(key_value) > self.INDEX_RECORD_SIZE - 5:
+        if len(key_value) > self.INDEX_RECORD_SIZE:
             return False, ("Limit Exceeded", "Key is too long!")
         
         return True, None
