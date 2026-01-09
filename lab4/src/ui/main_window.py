@@ -111,7 +111,31 @@ class MainWindow(tk.Tk):
         Button(add_window, text="Add Record", command=submit).pack(pady=20)
 
     def _on_find_click(self):
-        pass
+        key_to_find = simpledialog.askinteger("Find Record", "Enter Key to search:")
+        
+        if key_to_find is None:
+            return
+
+        result = self.app.search(key_to_find)
+
+        if result != -1:
+            msg = (f"Key: {result['key']}\n"
+                    f"Value: {result['value']}\n"
+                    f"Area: {result['area']}")
+            messagebox.showinfo("Record Found", msg)
+
+            self._highlight_row_by_key(result['key'])
+        else:
+            messagebox.showwarning("Not Found", f"Record with key {key_to_find} not found!")
+
+    def _highlight_row_by_key(self, key):
+        for item_id in self.tree.get_children():
+            row_key = self.tree.item(item_id)['values'][0]
+            
+            if str(row_key) == str(key):
+                self.tree.selection_set(item_id)
+                self.tree.see(item_id)
+                return
 
     def _on_update_click(self):
         pass
