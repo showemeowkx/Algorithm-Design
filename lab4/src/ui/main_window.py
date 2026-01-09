@@ -138,7 +138,51 @@ class MainWindow(tk.Tk):
                 return
 
     def _on_update_click(self):
-        pass
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a record to delete")
+            return
+
+        item_id = selected[0]
+        row_values = self.tree.item(item_id)['values']
+        current_key = row_values[0]
+        current_val = row_values[1]
+
+        update_win = Toplevel(self)
+        update_win.title(f"Update Record #{current_key}")
+        update_win.geometry("400x200")
+        update_win.transient(self)
+        update_win.grab_set()
+
+        Label(update_win, text=f"Key: {current_key}", font=('Arial', 10, 'bold')).pack(pady=10)
+        
+        Label(update_win, text="Enter New Data Value").pack()
+        val_entry = Entry(update_win)
+        val_entry.insert(0, current_val)
+        val_entry.pack(padx=20, fill=X)
+
+        def do_save():
+            new_data = val_entry.get()
+
+            data_validation, msg = self.validator.validate_data(new_data)
+
+            if not data_validation:
+                messagebox.showwarning(msg[0], msg[1])
+                return
+
+            try:
+                result = self.app.update(int(current_key), new_data)
+                
+                if result != -1:
+                    messagebox.showinfo("Success", "Record updated successfully!")
+                    update_win.destroy()
+                    self.refresh_table()
+                else:
+                    messagebox.showerror("Error", "Failed to update record in storage.")
+            except Exception as e:
+                messagebox.showerror("Error", f"An unexpected error occurred: {e}")
+
+        Button(update_win, text="Save Changes", command=do_save).pack(pady=20)
 
     def _on_delete_click(self):
         selected = self.tree.selection()
