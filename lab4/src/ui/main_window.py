@@ -1,13 +1,12 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, Toplevel, Label, Entry, Button, X
+from tkinter import ttk, messagebox, simpledialog, Toplevel, Label, Entry, Button, X
+from utils.validator import Validator
 
 class MainWindow(tk.Tk):
     def __init__(self, app, record_size, index_record_size):
         super().__init__()
-        self.RECORD_SIZE = record_size
-        self.INDEX_RECORD_SIZE = index_record_size
-
         self.app = app
+        self.validator = Validator(record_size, index_record_size)
         self.title("Lab 4 - Oleksandr Cherepov")
         self.geometry("800x500")
 
@@ -88,29 +87,26 @@ class MainWindow(tk.Tk):
             key_val = key_entry.get()
             data_val = value_entry.get()
 
-            if not data_val.strip():
-                messagebox.showwarning("Input Error", "Data value cannot be empty!")
+            key_validation, msg = self.validator.validate_key(key_val)
+
+            if not key_validation:
+                messagebox.showwarning(msg[0], msg[1])
                 return
+
+            data_validation, msg = self.validator.validate_data(data_val)
+
+            if not data_validation and key_validation:
+                messagebox.showwarning(msg[0], msg[1])
+                return
+
+            new_id = self.app.add(data_val, int(key_val))
             
-            if len(key_val.encode('utf-8')) > self.INDEX_RECORD_SIZE - 5:
-                messagebox.showerror("Limit Exceeded", f"Key is too long!")
-                return
-
-            if len(data_val.encode('utf-8')) > self.RECORD_SIZE - 1:
-                messagebox.showerror("Limit Exceeded", f"Data is too long!")
-                return
-
-            try:
-                new_id = self.app.add(data_val, int(key_val))
-                
-                if new_id != -1:
-                    messagebox.showinfo("Success", f"Record added successfully with ID: {new_id}")
-                    add_window.destroy()
-                    self.refresh_table()
-                else:
-                    messagebox.showerror("Error", "Failed to add record. ID might already exist.")
-            except ValueError:
-                messagebox.showerror("Input Error", "Key must be an integer!")
+            if new_id != -1:
+                messagebox.showinfo("Success", f"Record added successfully with ID: {new_id}")
+                add_window.destroy()
+                self.refresh_table()
+            else:
+                messagebox.showerror("Error", "Failed to add record. ID might already exist.")
 
         Button(add_window, text="Add Record", command=submit).pack(pady=20)
 
