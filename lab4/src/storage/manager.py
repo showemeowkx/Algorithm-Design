@@ -56,6 +56,7 @@ class StorageManager:
         index_pos = None
         area = None
         output_data = None
+        c = 0
 
         if len(indices) == 0:
             raise Exception("Index file is empty!")
@@ -63,9 +64,11 @@ class StorageManager:
         min_index_main = indices[0][0]
         max_index_main = indices[len(indices)-1][0]
 
+        c += 1
         if min_index_main <= key <= max_index_main:
             self.logger.info("Searching in the main area...")
-            output_data, index_pos = self._search_main(key, indices)
+            output_data, index_pos, c_main = self._search_main(key, indices)
+            c += c_main
 
             if output_data is None: self.logger.info("Failed to find in the main area")
             else: area = "main"
@@ -77,7 +80,8 @@ class StorageManager:
             if len(indices) == 0:
                 self.logger.warning("Overflow file is empty!")
             else:
-                output_data, index_pos = self._overflow_search(key, indices)
+                output_data, index_pos, c_overflow = self._overflow_search(key, indices)
+                c += c_overflow
 
                 if output_data is not None:
                     area = "overflow"
@@ -92,7 +96,12 @@ class StorageManager:
                     for line_no, line in enumerate(f):
                         if line_no == record_number:
                             self.logger.info(f"Record found successfully! ({output_data})")
-                            return {"key": key, "number": record_number, "value": line.decode('ascii').strip(), "area": area, "index_pos": index_pos}
+                            return {"key": key,
+                                    "number": record_number,
+                                    "value": line.decode('ascii').strip(),
+                                    "area": area,
+                                    "index_pos": index_pos,
+                                    "comparisons": c}
                         
             else: raise Exception("Data file doesn't exist!")
 
@@ -178,39 +187,45 @@ class StorageManager:
         for k, v in indices:
             keys.append((k))
         
-        pos = self._interpolation_search(keys=keys, target_key=key)
+        pos, c_main = self._interpolation_search(keys=keys, target_key=key)
         
-        if pos != -1: return indices[pos], pos
-        else: return None, None
+        if pos != -1: return indices[pos], pos, c_main
+        else: return None, None, c_main
 
     def _overflow_search(self, key, indices):
+        c = 0
         for record in indices:
+            c += 1
             if record[0] == key:
-                return record, indices.index(record)
+                return record, indices.index(record), c
 
-        return None, None
+        return None, None, c
 
     def _interpolation_search(self, keys, target_key):
         self.logger.info("Using interpolation search...")
         low = 0
         high = len(keys) - 1
+        c = 0
 
         while low <= high and keys[low] <= target_key <= keys[high]:
+            c += 1
             if high == low:
-                if keys[low] == target_key: return low
+                c += 1
+                if keys[low] == target_key: return low, c
                 break
 
             pos =  low + ((target_key-keys[low]) * (high-low))//(keys[high]-keys[low])
 
+            c += 1
             if keys[pos] == target_key:
-                return pos
+                return pos, c
             
             if keys[pos] < target_key:
                 low = pos + 1
             else:
                 high = pos - 1
 
-        return -1
+        return -1, c
     
     def _write_index(self, new_idnex, record_number):
         self.logger.info(f"Beginning index writing process... ({new_idnex},{record_number})")

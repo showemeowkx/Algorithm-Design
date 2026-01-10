@@ -89,11 +89,12 @@ class App:
         except Exception as e:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
 
+
         if result is not None:
-            self.logger.info("--- RECORD FOUND SUCCESSFULLY ---")
+            self.logger.info(f"--- RECORD FOUND SUCCESSFULLY (comparisons: {result['comparisons']}) ---")
             return result
         else:
-            self.logger.info("--- FAILED TO FIND A RECORD ---")
+            self.logger.info(f"--- FAILED TO FIND A RECORD ---")
             return -1
         
     def update(self, key, new_value):
