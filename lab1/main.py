@@ -24,20 +24,6 @@ def format_time(seconds):
     
     return time_output
 
-def check_sorted(main_file):
-    prev = -1
-
-    with open(f"{FILES_BASE_PATH}/{main_file}", "r") as file:
-        for line in file:
-            cur = extract_key_from_line(line)
-
-            if prev > cur:
-                return False
-            
-            prev = cur
-
-        return True
-
 def merge_files(main_file, file0="0.txt", file1="1.txt"):
     with open(f"{FILES_BASE_PATH}/{file0}", 'r') as f0, \
          open(f"{FILES_BASE_PATH}/{file1}", 'r') as f1, \
@@ -47,29 +33,54 @@ def merge_files(main_file, file0="0.txt", file1="1.txt"):
         line1 = f1.readline()
 
         while line0 and line1:
-            key0 = extract_key_from_line(line0)
-            key1 = extract_key_from_line(line1)
+            end0 = False
+            end1 = False
 
-            if key0 <= key1:
+            while not end0 and not end1:
+                key0 = extract_key_from_line(line0)
+                key1 = extract_key_from_line(line1)
+
+                if key0 <= key1:
+                    main_f.write(line0)
+                    line0 = f0.readline()
+
+                    if not line0 or extract_key_from_line(line0) < key0:
+                        end0 = True
+                else:
+                    main_f.write(line1)
+                    line1 = f1.readline()
+
+                    if not line1 or extract_key_from_line(line1) < key1:
+                        end1 = True
+            
+            while not end0:
                 main_f.write(line0)
+                prev = extract_key_from_line(line0)
                 line0 = f0.readline()
-            else:
-                main_f.write(line1)
-                line1 = f1.readline()
+                
+                if not line0 or extract_key_from_line(line0) < prev:
+                    end0 = True
 
-        if line0:
+            while not end1:
+                main_f.write(line1)
+                prev = extract_key_from_line(line1)
+                line1 = f1.readline()
+                
+                if not line1 or extract_key_from_line(line1) < prev:
+                    end1 = True
+
+        while line0:
             main_f.write(line0)
-            for rest in f0:
-                main_f.write(rest)
-        
-        if line1:
+            line0 = f0.readline()
+
+        while line1:
             main_f.write(line1)
-            for rest in f1:
-                main_f.write(rest)
+            line1 = f1.readline()
 
 def distribute_data(filename, file0="0.txt", file1="1.txt"):
     prev = - (math.inf)
     file_flag = 0
+    chunks = 0
 
     with open(f"{FILES_BASE_PATH}/{filename}", "r") as main_f, \
             open(f"{FILES_BASE_PATH}/{file0}", "w") as f0, \
@@ -82,10 +93,13 @@ def distribute_data(filename, file0="0.txt", file1="1.txt"):
 
                 if prev > cur:
                     file_flag += 1
+                    chunks += 1
                 
                 temp_files[file_flag % 2].write(line)
 
                 prev = cur
+
+    return chunks
 
 def sort_adaprive_asc(filename, file0="0.txt", file1="1.txt", file_size_mb=10, max_string_len=20):
     generate_data(f"{FILES_BASE_PATH}/{filename}", file_size_mb, max_string_len)
@@ -93,9 +107,11 @@ def sort_adaprive_asc(filename, file0="0.txt", file1="1.txt", file_size_mb=10, m
     start_time = time.time()
     print(f"STARTING SORTING PROCESS... [{start_time}]")
 
-    while not check_sorted(filename):
-        distribute_data(filename)
-        merge_files(filename)
+    while True:
+        chunks = distribute_data(filename)
+
+        if chunks > 0: merge_files(filename)
+        else: break
 
     os.remove(f"{FILES_BASE_PATH}/{file0}")
     os.remove(f"{FILES_BASE_PATH}/{file1}")
