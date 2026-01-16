@@ -1,9 +1,10 @@
 from generate import generate_data
 import time
+import shutil
 import os
 
 FILES_BASE_PATH = "./files"
-CHUNK_SIZE_BYTES = 100 * 1024 * 1024 
+CHUNK_SIZE_BYTES = 25 * 1024 * 1024 
 
 def extract_key_from_line(line):
     return int(line.partition(' ')[0])
@@ -102,7 +103,7 @@ def merge_chunks(chunk_files, output_file):
             f.close()
 
 def sort_adaptive_asc(filename, file_size_mb=1000, max_string_len=20):
-    generate_data(f"{FILES_BASE_PATH}/{filename}", file_size_mb, max_string_len)
+    # generate_data(f"{FILES_BASE_PATH}/{filename}", file_size_mb, max_string_len)
 
     start_time = time.time()
     print(f"STARTING SORTING PROCESS... [{start_time}]")
@@ -119,4 +120,6 @@ def sort_adaptive_asc(filename, file_size_mb=1000, max_string_len=20):
     print(f"SORTING EXECUTED SUCCESSFULLY [{end_time}]")
     print("PROCESSING TIME:", format_time(end_time - start_time))
 
-sort_adaptive_asc("data.txt", file_size_mb=1024)
+shutil.copyfile('./data_1GB.txt', './files/data.txt')
+
+sort_adaptive_asc("data.txt", file_size_mb=500)
