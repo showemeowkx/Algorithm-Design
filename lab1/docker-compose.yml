@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  basic:
+    build: .
+    container_name: basic
+    command: python main.py
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 300M
+    memswap_limit: 300M
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  enhanced:
+    build: .
+    container_name: enhanced
+    command: python main_enhanced.py
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 300M
+    memswap_limit: 300M
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
