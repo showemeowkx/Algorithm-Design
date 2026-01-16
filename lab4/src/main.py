@@ -48,8 +48,8 @@ def run_experiment(num_searches=20):
     print(f"\nAverage comparisons for {num_searches} searches: {average:.2f}")
     return average
 
-# fill_database(app, 5000)
-# run_experiment(app)
+# fill_database(5000)
+# run_experiment()
 
 root = MainWindow(app, record_size=RECORD_SIZE, index_record_size=INDEX_RECORD_SIZE)
 root.mainloop()

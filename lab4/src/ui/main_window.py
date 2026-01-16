@@ -64,11 +64,16 @@ class MainWindow(tk.Tk):
         self.btn_next = tk.Button(nav_frame, text="▶", command=self._next_block)
         self.btn_next.pack(side=tk.RIGHT, padx=20)
 
-    def refresh_table(self):
+    def refresh_table(self, block=None):
+        if block is None:
+            block = self.current_block
+        else:
+            self.current_block = block
+
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        records, total_blocks = self.app.get_block(self.current_block)
+        records, total_blocks = self.app.get_block(block)
 
         for rec in records:
             self.tree.insert("", tk.END, values=(
@@ -77,8 +82,8 @@ class MainWindow(tk.Tk):
                 rec['area'].upper()
             ))
 
-        self.btn_prev.config(state=tk.NORMAL if self.current_block > 0 else tk.DISABLED)
-        self.btn_next.config(state=tk.NORMAL if self.current_block < total_blocks - 1 else tk.DISABLED)
+        self.btn_prev.config(state=tk.NORMAL if block > 0 else tk.DISABLED)
+        self.btn_next.config(state=tk.NORMAL if block < total_blocks - 1 else tk.DISABLED)
 
     def _next_block(self):
         self.current_block += 1
@@ -145,6 +150,9 @@ class MainWindow(tk.Tk):
                     f"Area: {result['area']}")
             messagebox.showinfo("Record Found", msg)
 
+            block_number = self.app.find_block_number(result['key'])
+
+            self.refresh_table(block=block_number)
             self._highlight_row_by_key(result['key'])
         else:
             messagebox.showwarning("Not Found", f"Record with key {key_to_find} not found!")

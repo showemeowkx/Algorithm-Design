@@ -65,6 +65,20 @@ class App:
         except Exception as e:
             self.logger.error(f"An error occurred while fetching records (block {block_number}): {e}")
             return [], 0
+        
+    def find_block_number(self, key):
+        try:
+            indices_main = self.storage._get_indices(area="main")
+            indices_overflow = self.storage._get_indices(area="overflow")
+            all_indices = indices_main + indices_overflow
+            
+            for i, (k, _) in enumerate(all_indices):
+                if k == key:
+                    return i // self.BLOCK_CAPACITY
+            return -1
+        except Exception as e:
+            self.logger.error(f"Error finding block index: {e}")
+            return -1
 
     def add(self, data, key=-1):
         self.logger.info("--- ADDING A NEW RECORD ---")
@@ -88,7 +102,6 @@ class App:
             result = self.storage.search(key)
         except Exception as e:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
-
 
         if result is not None:
             self.logger.info(f"--- RECORD FOUND SUCCESSFULLY (comparisons: {result['comparisons']}) ---")
