@@ -139,6 +139,23 @@ class StorageManager:
                         
             else: raise Exception("Data file doesn't exist!")
 
+    def get_all_records(self):
+        self.logger.info(f"Getting all records...")
+
+        all_indices = []
+
+        file_size = os.path.getsize(self.index_path)
+        total_blocks = file_size // self.BLOCK_SIZE_BYTES
+        
+        for i in range(total_blocks):
+            block = self._get_index_block(i)
+            all_indices.extend(block)
+
+        overflow_indices = self._get_overflow_indices()
+        all_indices.extend(overflow_indices)
+
+        return all_indices
+
     def update_record(self, key, new_value):
         self.logger.info(f"Beginning data changing process... (key: {key})")
         record_to_change = self.search(key)

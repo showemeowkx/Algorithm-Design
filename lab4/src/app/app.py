@@ -13,6 +13,7 @@ class App:
 
         self.BLOCK_CAPACITY = block_capacity
         self.MAIN_INDEX_CAPACITY = main_index_capacity
+        self.PAGE_LIMIT = 100
 
     def start(self):
         self.logger.info("--- BEGINNING WORKSPACE INITIALIZATION ---")
@@ -30,39 +31,27 @@ class App:
 
         self.logger.info("--- WORKSPACE INITIALIZATIZED SUCCESSFULLY ---")
 
-    def get_records(self, page, limit=100):
+    def get_records(self, page):
             self.logger.info(f"--- GETTING RECORDS (PAGE {page + 1}) ---")
 
             try:
-                all_indices = []
-
-                file_size = os.path.getsize(self.storage.index_path)
-                total_blocks = file_size // self.storage.BLOCK_SIZE_BYTES
-                
-                for i in range(total_blocks):
-                    block = self.storage._get_index_block(i)
-                    all_indices.extend(block)
-
-                overflow_indices = self.storage._get_overflow_indices()
-                all_indices.extend(overflow_indices)
-
+                all_indices = self.storage.get_all_records()
                 all_indices.sort(key=lambda x: x[0])
 
                 total_records = len(all_indices)
-                total_pages = (total_records + limit - 1) // limit
+                total_pages = (total_records + self.PAGE_LIMIT - 1) // self.PAGE_LIMIT
                 
                 if total_pages == 0: total_pages = 1
-
                 if page >= total_pages: page = total_pages - 1
                 if page < 0: page = 0
 
-                start_idx = page * limit
-                end_idx = start_idx + limit
+                start = page * self.PAGE_LIMIT
+                end = start + self.PAGE_LIMIT
                 
-                page_subset = all_indices[start_idx : end_idx]
-
+                page_indices = all_indices[start : end]
                 records = []
-                for key, _ in page_subset:
+
+                for key, _ in page_indices:
                     rec = self.storage.search(key)
                     if rec:
                         records.append(rec)
@@ -70,32 +59,9 @@ class App:
                 self.logger.info(f"--- RECORDS RECEIVED SUCCSESSFULLY (PAGE {page+1}/{total_pages}) ---")
 
                 return records, total_pages
-
             except Exception as e:
                 self.logger.error(f"An error occurred while fetching records: {e}")
-                import traceback
-                self.logger.error(traceback.format_exc())
                 return [], 1
-        
-    def get_block(self, block_number):
-        self.logger.info(f"--- GETTING RECORDS (BLOCK {block_number+1}) ---")
-
-        try:
-            records = []
-
-            block_indices = self.storage._get_index_block(block_number)
-            
-            for key, _ in block_indices:
-                result = self.storage.search(key)
-                if result: records.append(result)
-                
-            self.logger.info("--- RECORDS RECEIVED SUCCESSFULLY ---")
-
-            total_blocks = self.storage._get_blocks_count()
-            return records, total_blocks
-        except Exception as e:
-            self.logger.error(f"An error occurred while fetching records (block {block_number+1}): {e}")
-            return [], 0
 
     def add(self, data, key=-1):
         self.logger.info("--- ADDING A NEW RECORD ---")

@@ -150,6 +150,10 @@ class MainWindow(tk.Tk):
                     f"Area: {result['area']}")
             messagebox.showinfo("Record Found", msg)
 
+            target_page = self._get_page_for_record(result['key'])
+
+            if target_page != -1: self.refresh_table(target_page)
+
             self._highlight_row_by_key(result['key'])
         else:
             messagebox.showwarning("Not Found", f"Record with key {key_to_find} not found!")
@@ -162,6 +166,17 @@ class MainWindow(tk.Tk):
                 self.tree.selection_set(item_id)
                 self.tree.see(item_id)
                 return
+            
+    def _get_page_for_record(self, key):
+        all_indices = self.app.storage.get_all_records()
+
+        all_indices.sort(key=lambda x: x[0])
+
+        for global_index, (k, _) in enumerate(all_indices):
+            if k == key:
+                return global_index // self.app.PAGE_LIMIT
+        
+        return -1
 
     def _on_update_click(self):
         selected = self.tree.selection()
