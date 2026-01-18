@@ -2,11 +2,14 @@ import os
 from utils.logger import Logger
 
 class StorageManager:
-    def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity):
+    def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity, block_capacity):
         self.data_dir = data_dir_path
         self.RECORD_SIZE = record_size
         self.INDEX_RECORD_SIZE = index_record_size
+        self.BLOCK_CAPACITY = block_capacity
         self.MAIN_INDEX_CAPACITY = main_index_capacity
+
+        self.BLOCK_SIZE_BYTES = (self.INDEX_RECORD_SIZE + 1) * self.BLOCK_CAPACITY
         
         self.data_path = os.path.join(self.data_dir, "data.dat")
         self.index_path = os.path.join(self.data_dir, "index.dat")
@@ -23,14 +26,9 @@ class StorageManager:
         else:
             record_number = 0
 
-        self.logger.info(f"Calculated record number: {record_number}")
-
-        new_index = record_number + 1 if key == -1 else key
-
-        if key == -1:
-            while self._index_exists(new_index):
-                self.logger.info("Index exists. Adjusting auto-generated value...")
-                new_index += 1
+        self.logger.info(f"Calculated record number: {record_number}")\
+        
+        new_index = key if key != -1 else self._define_auto_key()
 
         self.logger.info(f"New index for data: {new_index}")
 
@@ -50,13 +48,50 @@ class StorageManager:
             self.logger.warning(f"An element with index {new_index} already exists!")
             return -1
         
+    def _define_auto_key(self):
+        self.logger.info("Defining auto key...")
+        
+        candidate_key = 1
+        current_block_idx = 0
+        
+        while True:
+            if candidate_key > self.MAIN_INDEX_CAPACITY:
+                break
+                
+            indices = self._get_index_block(current_block_idx)
+            
+            existing_keys_in_block = [k for k, v in indices]
+            
+            start_key_for_block = (current_block_idx * self.BLOCK_CAPACITY) + 1
+            end_key_for_block = start_key_for_block + self.BLOCK_CAPACITY - 1
+            
+            for k in range(start_key_for_block, end_key_for_block + 1):
+                if k not in existing_keys_in_block:
+                    if not self._index_exists(k, area='overflow'):
+                        return k
+            
+            current_block_idx += 1
+            candidate_key = (current_block_idx * self.BLOCK_CAPACITY) + 1
+
+
+        candidate_key = self.MAIN_INDEX_CAPACITY + 1
+        while self._index_exists(candidate_key, area='overflow'):
+             candidate_key += 1
+             
+        return candidate_key
+        
     def search(self, key):
         self.logger.info(f"Beginning searching process... (key: {key})")
-        indices = self._get_indices()
+        indices = []
         index_pos = None
         area = None
         output_data = None
         c = 0
+
+        block_index = self._find_block(key)
+
+        if block_index != -1:
+            indices = self._get_index_block(block_index)
 
         if len(indices) == 0:
             raise Exception("Index file is empty!")
@@ -151,26 +186,125 @@ class StorageManager:
 
         return record_to_delete
     
-    def _get_indices(self, area='main'):
-        self.logger.info(f"Getting indices... (area: {area})")
+    def _get_index_block(self, block_index):
+        self.logger.info(f"Getting indices... (block_index: {block_index})")
         indices = []
-        path = self.overflow_path if area == 'overflow' else self.index_path
 
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                for line in f.readlines():
-                    line = line.decode("ascii")
-                    if line.strip():
-                        pair = line.strip().split(',')
-                        k, v = pair
-                        indices.append((int(k), int(v)))
+        if not os.path.exists(self.index_path):
+            return indices
+        
+        with open(self.index_path, "rb") as f:
+            offset = block_index * self.BLOCK_SIZE_BYTES
+            f.seek(offset)
+            block_data = f.read(self.BLOCK_SIZE_BYTES)
+
+            for i in range(0, len(block_data), self.INDEX_RECORD_SIZE+1):
+                chunk = block_data[i : i + self.INDEX_RECORD_SIZE+1]
+                record = self._parse_index_chunk(chunk)
+
+                if record: indices.append(record)
 
         return indices
     
-    def _index_exists(self, index, area='main'):
-        self.logger.info("Checking if index exists... (area: {area})")
+    def _get_overflow_indices(self):
+        self.logger.info(f"Getting indices from overflow area...")
+        indices = []
 
-        indices = self._get_indices(area)
+        if os.path.exists(self.overflow_path):
+            with open(self.overflow_path, "rb") as f:
+                for line in f.readlines():
+                    record = self._parse_index_chunk(line)
+                    if record: indices.append(record)
+
+        return indices
+    
+    def _find_block(self, key):
+        if not os.path.exists(self.index_path): return -1
+
+        file_size = os.path.getsize(self.index_path)
+        if file_size == 0: return -1
+
+        total_blocks = (file_size + self.BLOCK_SIZE_BYTES - 1) // self.BLOCK_SIZE_BYTES
+
+        low = 0
+        high = total_blocks - 1
+
+        low_key, _ = self._get_block_bounds(low)
+        _, high_key = self._get_block_bounds(high)
+
+        if low_key is None or high_key is None: return -1
+
+        while low <= high and low_key <= key <= high_key:
+            if low == high:
+                if low_key <= key <= high_key: return low
+                return -1
+            
+            if high_key - low_key == 0: return low
+
+            pos = low + ((key - low_key) * (high - low)) // (high_key - low_key)
+
+            p_min, p_max = self._get_block_bounds(pos)
+
+            if p_min is None: return -1
+            if p_min <= key <= p_max: return pos
+
+            if key < p_min:
+                high = pos - 1
+                _, high_key = self._get_block_bounds(high)
+            else:
+                low = pos + 1
+                low_key, _ = self._get_block_bounds(low)
+
+        return -1
+
+    def _get_block_bounds(self, block_index):
+        with open (self.index_path, "rb") as f:
+            start_offset = block_index * self.BLOCK_SIZE_BYTES
+            f.seek(start_offset)
+
+            block_data = f.read(self.BLOCK_SIZE_BYTES)
+
+            if not block_data:
+                return None, None
+            
+            first_chunk = block_data[:self.INDEX_RECORD_SIZE+1]
+            first_record = self._parse_index_chunk(first_chunk)
+
+            count = len(block_data) // (self.INDEX_RECORD_SIZE+1)
+            if count == 0: return None, None
+
+            end_offset = (count-1) * (self.INDEX_RECORD_SIZE+1)
+
+            last_chunk = block_data[end_offset: end_offset+self.INDEX_RECORD_SIZE+1]
+            last_record = self._parse_index_chunk(last_chunk)
+
+            if first_record and last_record:
+                return first_record[0], last_record[0]
+            
+            return None, None
+    
+    def _parse_index_chunk(self, chunk):
+        try:
+            line = chunk.decode('ascii').strip()
+            if not line: return None
+            k, v = line.split(',')
+            return int(k), int(v)
+        except:
+            return None
+        
+    def _get_blocks_count(self):
+        if not os.path.exists(self.index_path):
+            return -1
+        
+        file_size = os.path.getsize(self.index_path)
+        total_blocks = file_size / self.BLOCK_SIZE_BYTES
+
+        return total_blocks
+
+    def _index_exists(self, index, area='main'):
+        self.logger.info(f"Checking if index exists... (area: {area})")
+
+        indices = self._get_index_block(index // self.BLOCK_CAPACITY) if area == 'main' else self._get_overflow_indices()
         keys = []
         result = False
 
@@ -229,10 +363,16 @@ class StorageManager:
     
     def _write_index(self, new_idnex, record_number):
         self.logger.info(f"Beginning index writing process... ({new_idnex},{record_number})")
-        indices = self._get_indices()
+        
+        if new_idnex > self.MAIN_INDEX_CAPACITY:
+            block_index = (self.MAIN_INDEX_CAPACITY // self.BLOCK_CAPACITY) - 1
+        else:
+            block_index = (new_idnex - 1) // self.BLOCK_CAPACITY
+
+        indices = self._get_index_block(block_index)
 
         self.logger.info("Defining storage area...")
-        if len(indices) < self.MAIN_INDEX_CAPACITY:
+        if len(indices) < self.BLOCK_CAPACITY:
             self.logger.info("Main area is free. Defining position...")
             insert_pos = 0
 
@@ -243,17 +383,36 @@ class StorageManager:
             indices.insert(insert_pos, (new_idnex, record_number))
 
             self.logger.info("Rewriting index file...")
-            with open(self.index_path, "wb") as f:
+            with open(self.index_path, "r+b") as f:
+                offset = block_index * self.BLOCK_SIZE_BYTES
+
+                f.seek(offset)
+
                 for k, v in indices:
                     index_data = f"{k},{v}"
                     formatted_index_data = (index_data.ljust(self.INDEX_RECORD_SIZE)[:self.INDEX_RECORD_SIZE] + "\n").encode('ascii')
                     f.write(formatted_index_data)
+
+                empty_slots = self.BLOCK_CAPACITY - len(indices)
+                empty_record = ((" " * self.INDEX_RECORD_SIZE) + "\n").encode('ascii')
+            
+                for _ in range(empty_slots):
+                    f.write(empty_record)
         else:
             self.logger.info("Main area is full. Writing into overflow...")
             with open(self.overflow_path, "a") as f:
                 f.write(f"{new_idnex},{record_number}\n")
 
         self.logger.info(f"Index data written successfully! ({new_idnex},{record_number})")
+
+    def _read_block(self, block_index):
+        offset = block_index * self.BLOCK_SIZE_BYTES
+
+        with open (self.index_path, "rb") as f:
+            f.seek(offset)
+            block_data = f.read(self.BLOCK_SIZE_BYTES)
+
+        return block_data
 
     def _delete_from_file(self, file_path, record_index):
         with open (file_path, "rb") as f:
