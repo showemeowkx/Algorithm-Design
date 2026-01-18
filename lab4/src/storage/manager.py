@@ -216,45 +216,6 @@ class StorageManager:
                     if record: indices.append(record)
 
         return indices
-    
-    def _find_block(self, key):
-        if not os.path.exists(self.index_path): return -1
-
-        file_size = os.path.getsize(self.index_path)
-        if file_size == 0: return -1
-
-        total_blocks = (file_size + self.BLOCK_SIZE_BYTES - 1) // self.BLOCK_SIZE_BYTES
-
-        low = 0
-        high = total_blocks - 1
-
-        low_key, _ = self._get_block_bounds(low)
-        _, high_key = self._get_block_bounds(high)
-
-        if low_key is None or high_key is None: return -1
-
-        while low <= high and low_key <= key <= high_key:
-            if low == high:
-                if low_key <= key <= high_key: return low
-                return -1
-            
-            if high_key - low_key == 0: return low
-
-            pos = low + ((key - low_key) * (high - low)) // (high_key - low_key)
-
-            p_min, p_max = self._get_block_bounds(pos)
-
-            if p_min is None: return -1
-            if p_min <= key <= p_max: return pos
-
-            if key < p_min:
-                high = pos - 1
-                _, high_key = self._get_block_bounds(high)
-            else:
-                low = pos + 1
-                low_key, _ = self._get_block_bounds(low)
-
-        return -1
 
     def _get_block_bounds(self, block_index):
         with open (self.index_path, "rb") as f:
@@ -290,15 +251,6 @@ class StorageManager:
             return int(k), int(v)
         except:
             return None
-        
-    def _get_blocks_count(self):
-        if not os.path.exists(self.index_path):
-            return -1
-        
-        file_size = os.path.getsize(self.index_path)
-        total_blocks = file_size / self.BLOCK_SIZE_BYTES
-
-        return total_blocks
 
     def _index_exists(self, index, area='main'):
         self.logger.info(f"Checking if index exists... (area: {area})")
