@@ -10,6 +10,7 @@ class StorageManager:
         self.MAIN_INDEX_CAPACITY = main_index_capacity
 
         self.BLOCK_SIZE_BYTES = (self.INDEX_RECORD_SIZE + 1) * self.BLOCK_CAPACITY
+        self.BLOCKS_COUNT = self.MAIN_INDEX_CAPACITY // self.BLOCK_CAPACITY
         
         self.data_path = os.path.join(self.data_dir, "data.dat")
         self.index_path = os.path.join(self.data_dir, "index.dat")
@@ -88,10 +89,8 @@ class StorageManager:
         output_data = None
         c = 0
 
-        block_index = self._find_block(key)
-
-        if block_index != -1:
-            indices = self._get_index_block(block_index)
+        block_index = (key - 1) // self.BLOCK_CAPACITY if key <= self.MAIN_INDEX_CAPACITY else self.BLOCKS_COUNT-1
+        indices = self._get_index_block(block_index)
 
         if len(indices) == 0:
             raise Exception("Index file is empty!")
@@ -365,7 +364,7 @@ class StorageManager:
         self.logger.info(f"Beginning index writing process... ({new_idnex},{record_number})")
         
         if new_idnex > self.MAIN_INDEX_CAPACITY:
-            block_index = (self.MAIN_INDEX_CAPACITY // self.BLOCK_CAPACITY) - 1
+            block_index = (self.BLOCKS_COUNT) - 1
         else:
             block_index = (new_idnex - 1) // self.BLOCK_CAPACITY
 
