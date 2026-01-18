@@ -109,7 +109,7 @@ class StorageManager:
             
         if output_data is None:
             self.logger.info("Searching in the overflow area...")
-            indices = self._get_indices(area='overflow')
+            indices = self._get_overflow_indices()
 
             if len(indices) == 0:
                 self.logger.warning("Overflow file is empty!")
@@ -133,7 +133,7 @@ class StorageManager:
                             return {"key": key,
                                     "number": record_number,
                                     "value": line.decode('ascii').strip(),
-                                    "area": area,
+                                    "area": f"{area} [{block_index}]" if area == 'main' else area,
                                     "index_pos": index_pos,
                                     "comparisons": c}
                         
