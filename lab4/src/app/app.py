@@ -5,13 +5,19 @@ from storage.manager import StorageManager
 class App:
     def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity, block_capacity):
         self.data_dir = data_dir_path
-        self.BLOCK_CAPACITY = block_capacity
+
         self.initializer = Initializer(self.data_dir, index_record_size, block_capacity, main_index_capacity)
-        self.storage = StorageManager(self.data_dir, record_size, index_record_size, main_index_capacity)
+        self.storage = StorageManager(self.data_dir, record_size, index_record_size, main_index_capacity, block_capacity)
         self.logger = Logger("App")
+
+        self.BLOCK_CAPACITY = block_capacity
+        self.MAIN_INDEX_CAPACITY = main_index_capacity
 
     def start(self):
         self.logger.info("--- BEGINNING WORKSPACE INITIALIZATION ---")
+
+        if self.BLOCK_CAPACITY > self.MAIN_INDEX_CAPACITY:
+            self.logger.error_and_exit("Block capacity can't be larger than main index capacity", 1)
 
         try:
             self.initializer.init_workspace()
@@ -41,29 +47,23 @@ class App:
             return []
         
     def get_block(self, block_number):
-        self.logger.info(f"--- GETTING RECORDS (BLOCK {block_number}) ---")
+        self.logger.info(f"--- GETTING RECORDS (BLOCK {block_number+1}) ---")
 
         try:
             records = []
 
-            indices_main = self.storage._get_indices(area="main")
-            indices_overflow = self.storage._get_indices(area="overflow")
-            all_indices = indices_main + indices_overflow
-
-            start = block_number * self.BLOCK_CAPACITY
-            end = start + self.BLOCK_CAPACITY
-            block_indices = all_indices[start:end]
-
+            block_indices = self.storage._get_index_block(block_number)
+            
             for key, _ in block_indices:
                 result = self.storage.search(key)
                 if result: records.append(result)
                 
             self.logger.info("--- RECORDS RECEIVED SUCESSFULLY ---")
 
-            total_blocks = (len(all_indices) + self.BLOCK_CAPACITY - 1) // self.BLOCK_CAPACITY
+            total_blocks = self.storage._get_blocks_count()
             return records, total_blocks
         except Exception as e:
-            self.logger.error(f"An error occurred while fetching records (block {block_number}): {e}")
+            self.logger.error(f"An error occurred while fetching records (block {block_number+1}): {e}")
             return [], 0
         
     def find_block_number(self, key):
