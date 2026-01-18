@@ -19,6 +19,9 @@ class App:
         if self.BLOCK_CAPACITY > self.MAIN_INDEX_CAPACITY:
             self.logger.error_and_exit("Block capacity can't be larger than main index capacity", 1)
 
+        if self.MAIN_INDEX_CAPACITY % self.BLOCK_CAPACITY != 0:
+            self.logger.error_and_exit("Block capacity and main index capacity values must be multiples", 1)
+
         try:
             self.initializer.init_workspace()
         except Exception as e:
