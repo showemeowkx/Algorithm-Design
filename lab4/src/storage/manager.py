@@ -197,9 +197,11 @@ class StorageManager:
         self._delete_from_file(self.data_path, record_to_delete["number"])
 
         self.logger.info(f"Deleting a record from index file... (area: {record_to_delete['area']})")
-        index_path = self.index_path if record_to_delete["area"] == "main" else self.overflow_path
-        self._delete_from_file(index_path, record_to_delete["index_pos"])
-
+        if record_to_delete["area"] == "overflow":
+            self._delete_from_file(self.overflow_path, record_to_delete["index_pos"])
+        else:
+            self._delete_index(key)
+            
         return record_to_delete
     
     def _get_index_block(self, block_index):
@@ -233,32 +235,6 @@ class StorageManager:
                     if record: indices.append(record)
 
         return indices
-
-    def _get_block_bounds(self, block_index):
-        with open (self.index_path, "rb") as f:
-            start_offset = block_index * self.BLOCK_SIZE_BYTES
-            f.seek(start_offset)
-
-            block_data = f.read(self.BLOCK_SIZE_BYTES)
-
-            if not block_data:
-                return None, None
-            
-            first_chunk = block_data[:self.INDEX_RECORD_SIZE+1]
-            first_record = self._parse_index_chunk(first_chunk)
-
-            count = len(block_data) // (self.INDEX_RECORD_SIZE+1)
-            if count == 0: return None, None
-
-            end_offset = (count-1) * (self.INDEX_RECORD_SIZE+1)
-
-            last_chunk = block_data[end_offset: end_offset+self.INDEX_RECORD_SIZE+1]
-            last_record = self._parse_index_chunk(last_chunk)
-
-            if first_record and last_record:
-                return first_record[0], last_record[0]
-            
-            return None, None
     
     def _parse_index_chunk(self, chunk):
         try:
@@ -272,7 +248,7 @@ class StorageManager:
     def _index_exists(self, index, area='main'):
         self.logger.info(f"Checking if index exists... (area: {area})")
 
-        indices = self._get_index_block(index // self.BLOCK_CAPACITY) if area == 'main' else self._get_overflow_indices()
+        indices = self._get_index_block((index - 1) // self.BLOCK_CAPACITY) if area == 'main' else self._get_overflow_indices()
         keys = []
         result = False
 
@@ -372,6 +348,28 @@ class StorageManager:
                 f.write(f"{new_idnex},{record_number}\n")
 
         self.logger.info(f"Index data written successfully! ({new_idnex},{record_number})")
+
+    def _delete_index(self, index):
+        block_index = (index - 1) // self.BLOCK_CAPACITY
+        indices = self._get_index_block(block_index)
+
+        for k, v in indices:
+            if k == index:
+                indices.remove((k, v))
+                break
+
+        with open (self.index_path, "r+b") as f:
+            offset = block_index * self.BLOCK_SIZE_BYTES
+
+            f.seek(offset)
+
+            for k, v in indices:
+                index_data = f"{k},{v}"
+                formatted_index_data = (index_data.ljust(self.INDEX_RECORD_SIZE)[:self.INDEX_RECORD_SIZE] + "\n").encode('ascii')
+                f.write(formatted_index_data)
+
+            empty_record = ((" " * self.INDEX_RECORD_SIZE) + "\n").encode('ascii')
+            f.write(empty_record)
 
     def _read_block(self, block_index):
         offset = block_index * self.BLOCK_SIZE_BYTES
