@@ -73,7 +73,7 @@ class MainWindow(tk.Tk):
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        records, total_blocks = self.app.get_block(block)
+        records, total_blocks = self.app.get_records(block)
 
         for rec in records:
             self.tree.insert("", tk.END, values=(
@@ -150,9 +150,6 @@ class MainWindow(tk.Tk):
                     f"Area: {result['area']}")
             messagebox.showinfo("Record Found", msg)
 
-            block_number = self.app.find_block_number(result['key'])
-
-            self.refresh_table(block=block_number)
             self._highlight_row_by_key(result['key'])
         else:
             messagebox.showwarning("Not Found", f"Record with key {key_to_find} not found!")

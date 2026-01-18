@@ -1,6 +1,7 @@
 from utils.logger import Logger
 from app.initializer import Initializer
 from storage.manager import StorageManager
+import os
 
 class App:
     def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity, block_capacity):
@@ -29,25 +30,52 @@ class App:
 
         self.logger.info("--- WORKSPACE INITIALIZATIZED SUCCESSFULLY ---")
 
-    def get_all(self):
-        self.logger.info("--- GETTING ALL RECORDS ---")
+    def get_records(self, page, limit=100):
+            self.logger.info(f"--- GETTING RECORDS (PAGE {page + 1}) ---")
 
-        try:
-            all_records = []
+            try:
+                all_indices = []
 
-            indices_main = self.storage._get_indices(area="main")
-            indices_overflow = self.storage._get_indices(area="overflow")
-
-            for key, _ in indices_main + indices_overflow:
-                result = self.storage.search(key)
-                if result: all_records.append(result)
+                file_size = os.path.getsize(self.storage.index_path)
+                total_blocks = file_size // self.storage.BLOCK_SIZE_BYTES
                 
-            self.logger.info("--- RECORDS RECEIVED SUCESSFULLY ---")
+                for i in range(total_blocks):
+                    block = self.storage._get_index_block(i)
+                    all_indices.extend(block)
 
-            return all_records
-        except Exception as e:
-            self.logger.error(f"An error occurred while fetching all records: {e}")
-            return []
+                overflow_indices = self.storage._get_overflow_indices()
+                all_indices.extend(overflow_indices)
+
+                all_indices.sort(key=lambda x: x[0])
+
+                total_records = len(all_indices)
+                total_pages = (total_records + limit - 1) // limit
+                
+                if total_pages == 0: total_pages = 1
+
+                if page >= total_pages: page = total_pages - 1
+                if page < 0: page = 0
+
+                start_idx = page * limit
+                end_idx = start_idx + limit
+                
+                page_subset = all_indices[start_idx : end_idx]
+
+                records = []
+                for key, _ in page_subset:
+                    rec = self.storage.search(key)
+                    if rec:
+                        records.append(rec)
+
+                self.logger.info(f"--- RECORDS RECEIVED SUCCSESSFULLY (PAGE {page+1}/{total_pages}) ---")
+
+                return records, total_pages
+
+            except Exception as e:
+                self.logger.error(f"An error occurred while fetching records: {e}")
+                import traceback
+                self.logger.error(traceback.format_exc())
+                return [], 1
         
     def get_block(self, block_number):
         self.logger.info(f"--- GETTING RECORDS (BLOCK {block_number+1}) ---")
@@ -61,27 +89,13 @@ class App:
                 result = self.storage.search(key)
                 if result: records.append(result)
                 
-            self.logger.info("--- RECORDS RECEIVED SUCESSFULLY ---")
+            self.logger.info("--- RECORDS RECEIVED SUCCESSFULLY ---")
 
             total_blocks = self.storage._get_blocks_count()
             return records, total_blocks
         except Exception as e:
             self.logger.error(f"An error occurred while fetching records (block {block_number+1}): {e}")
             return [], 0
-        
-    def find_block_number(self, key):
-        try:
-            indices_main = self.storage._get_indices(area="main")
-            indices_overflow = self.storage._get_indices(area="overflow")
-            all_indices = indices_main + indices_overflow
-            
-            for i, (k, _) in enumerate(all_indices):
-                if k == key:
-                    return i // self.BLOCK_CAPACITY
-            return -1
-        except Exception as e:
-            self.logger.error(f"Error finding block index: {e}")
-            return -1
 
     def add(self, data, key=-1):
         self.logger.info("--- ADDING A NEW RECORD ---")
