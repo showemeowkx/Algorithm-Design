@@ -2,8 +2,15 @@ import os
 from utils.logger import Logger
 
 class Initializer:
-    def __init__(self, data_dir_path):
+    def __init__(self, data_dir_path, index_record_size, block_capacity, main_index_capacity):
         self.data_dir = data_dir_path
+
+        self.INDEX_RECORD_SIZE = index_record_size
+        self.BLOCK_CAPACITY = block_capacity
+        self.MAIN_INDEX_CAPACITY = main_index_capacity
+
+        self.BLOCK_SIZE_BYTES = (self.INDEX_RECORD_SIZE + 1) * self.BLOCK_CAPACITY
+        self.MAIN_INDEX_SIZE_BYTES = self.BLOCK_SIZE_BYTES * self.MAIN_INDEX_CAPACITY
 
         self.data_path = os.path.join(self.data_dir, "data.dat")
         self.index_path = os.path.join(self.data_dir, "index.dat")
@@ -46,9 +53,24 @@ class Initializer:
     def _create_data_files(self, settings):
         try:
             for file in settings:
-                with open(file, 'x') as f:
-                    self.logger.info(f"File {os.path.basename(file)} created successfully")
+                if file == self.index_path:
+                    self._create_main_index_file()
+                else:
+                    with open(file, 'x') as f:
+                        self.logger.info(f"File {os.path.basename(file)} created successfully")
         except Exception as e:
             self.logger.error_and_exit(f"An unexpected error occurred: {e}", 1)
+
+    def _create_main_index_file(self):
+        with open(self.index_path, "wb") as f:
+            entry_size = self.INDEX_RECORD_SIZE
+            capacity = self.MAIN_INDEX_CAPACITY
+            
+            empty_record = ((" " * entry_size) + "\n").encode('ascii')
+            
+            for _ in range(capacity):
+                f.write(empty_record)
+
+            self.logger.info("File index.dat created and filled successfully!")
         
         

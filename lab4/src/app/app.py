@@ -6,7 +6,7 @@ class App:
     def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity, block_capacity):
         self.data_dir = data_dir_path
         self.BLOCK_CAPACITY = block_capacity
-        self.initializer = Initializer(self.data_dir)
+        self.initializer = Initializer(self.data_dir, index_record_size, block_capacity, main_index_capacity)
         self.storage = StorageManager(self.data_dir, record_size, index_record_size, main_index_capacity)
         self.logger = Logger("App")
 
