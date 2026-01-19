@@ -82,62 +82,69 @@ class StorageManager:
         return candidate_key
         
     def search(self, key):
-        self.logger.info(f"Beginning searching process... (key: {key})")
-        indices = []
-        index_pos = None
-        area = None
-        output_data = None
-        c = 0
-
-        block_index = (key - 1) // self.BLOCK_CAPACITY if key <= self.MAIN_INDEX_CAPACITY else self.BLOCKS_COUNT-1
-        indices = self._get_index_block(block_index)
-
-        if len(indices) == 0:
-            raise Exception("Index file is empty!")
-
-        min_index_main = indices[0][0]
-        max_index_main = indices[len(indices)-1][0]
-
-        c += 1
-        if min_index_main <= key <= max_index_main:
-            self.logger.info("Searching in the main area...")
-            output_data, index_pos, c_main = self._search_main(key, indices)
-            c += c_main
-
-            if output_data is None: self.logger.info("Failed to find in the main area")
-            else: area = "main"
+            self.logger.info(f"Beginning searching process... (key: {key})")
+            indices = []
+            index_pos = None
+            area = None
+            output_data = None
             
-        if output_data is None:
-            self.logger.info("Searching in the overflow area...")
-            indices = self._get_overflow_indices()
+            c = 0
+
+            block_index = self._find_block(key)
+
+            if block_index != -1:
+                indices = self._get_index_block(block_index)
 
             if len(indices) == 0:
-                self.logger.warning("Overflow file is empty!")
+                raise Exception("Index file is empty!")
+
+            min_index_main = indices[0][0]
+            max_index_main = indices[-1][0]
+
+            c += 2 
+            if indices and min_index_main <= key <= max_index_main:
+                self.logger.info("Searching in the main area...")
+                output_data, index_pos, c_main = self._search_main(key, indices)
+                
+                c += c_main
+
+                if output_data is None: self.logger.info("Failed to find in the main area")
+                else: area = f"main [{block_index}]"
+            
+            if output_data is None:
+                self.logger.info("Searching in the overflow area...")
+                indices = self._get_overflow_indices()
+
+                if len(indices) == 0:
+                    self.logger.warning("Overflow file is empty!")
+                else:
+                    output_data, index_pos, c_overflow = self._overflow_search(key, indices)
+                    
+                    c += c_overflow
+
+                    if output_data:
+                        area = "overflow"
+
+            if output_data is None:
+                self.logger.warning(f"Failed to find a record! (key: {key})")
+                return None
             else:
-                output_data, index_pos, c_overflow = self._overflow_search(key, indices)
-                c += c_overflow
-
-                if output_data is not None:
-                    area = "overflow"
-
-        if output_data is None:
-            self.logger.warning(f"Failed to find a record! (key: {key})")
-            return None
-        else:
-            if os.path.exists(self.data_path):
-                record_number = output_data[1]
-                with open (self.data_path, "rb") as f:
-                    for line_no, line in enumerate(f):
-                        if line_no == record_number:
-                            self.logger.info(f"Record found successfully! ({output_data})")
-                            return {"key": key,
+                if os.path.exists(self.data_path):
+                    record_number = output_data[1]
+                    with open (self.data_path, "rb") as f:
+                        for line_no, line in enumerate(f):
+                            if line_no == record_number:
+                                self.logger.info(f"Record found successfully! ({output_data})")
+                                return {
+                                    "key": key,
                                     "number": record_number,
                                     "value": line.decode('ascii').strip(),
-                                    "area": f"{area} [{block_index}]" if area == 'main' else area,
+                                    "area": area,
                                     "index_pos": index_pos,
-                                    "comparisons": c}
-                        
-            else: raise Exception("Data file doesn't exist!")
+                                    "comparisons": c
+                                }
+                else: 
+                    raise Exception("Data file doesn't exist!")
 
     def get_all_records(self):
         self.logger.info(f"Getting all records...")
@@ -260,22 +267,21 @@ class StorageManager:
         return result
     
     def _search_main(self, key, indices):
-        keys = []
-
-        for k, v in indices:
-            keys.append((k))
+        keys = [k for k, v in indices]
         
-        pos, c_main = self._interpolation_search(keys=keys, target_key=key)
+        pos, c_main = self._interpolation_search(keys, target_key=key)
         
-        if pos != -1: return indices[pos], pos, c_main
-        else: return None, None, c_main
+        if pos != -1: 
+            return indices[pos], pos, c_main
+        else: 
+            return None, None, c_main
 
     def _overflow_search(self, key, indices):
         c = 0
-        for record in indices:
+        for i, record in enumerate(indices):
             c += 1
             if record[0] == key:
-                return record, indices.index(record), c
+                return record, i, c
 
         return None, None, c
 
