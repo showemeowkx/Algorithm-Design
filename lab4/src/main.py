@@ -30,12 +30,30 @@ def fill_database(count=10000):
     print("Database filled successfully!")
 
 def run_experiment(num_searches=20):
-    main_indices = app.storage._get_indices('main')
-    if not main_indices:
-        print("Database is empty!")
-        return
+    keys = []
 
-    test_keys = [random.choice(main_indices)[0] for _ in range(num_searches)]
+    if os.path.exists(app.storage.index_path):
+        file_size = os.path.getsize(app.storage.index_path)
+        total_blocks = file_size // app.storage.BLOCK_SIZE_BYTES
+
+        if total_blocks > 0:
+            for _ in range(num_searches):
+                rand_block_idx = random.randint(0, total_blocks - 1)
+                block_data = app.storage._get_index_block(rand_block_idx)
+                if block_data:
+                    key = random.choice(block_data)[0]
+                    keys.append(key)
+
+    if os.path.exists(app.storage.overflow_path):
+        overflow_indices = app.storage._get_overflow_indices()
+        if overflow_indices:
+            overflow_keys = [k for k, _ in overflow_indices]
+            count = min(len(overflow_keys), num_searches)
+            keys.extend(random.sample(overflow_keys, count))
+
+    random.shuffle(keys)
+    test_keys = keys[:num_searches]
+
     total_comparisons = 0
 
     print("\n--- RUNNING EFFICIENCY TEST ---")

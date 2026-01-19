@@ -90,7 +90,7 @@ class StorageManager:
             
             c = 0
 
-            block_index = self._find_block(key)
+            block_index = (key - 1) // self.BLOCK_CAPACITY if key <= self.MAIN_INDEX_CAPACITY else self.BLOCKS_COUNT-1
 
             if block_index != -1:
                 indices = self._get_index_block(block_index)

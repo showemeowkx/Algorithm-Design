@@ -1,7 +1,6 @@
 from utils.logger import Logger
 from app.initializer import Initializer
 from storage.manager import StorageManager
-import os
 
 class App:
     def __init__(self, data_dir_path, record_size, index_record_size, main_index_capacity, block_capacity):
